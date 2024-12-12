@@ -1,0 +1,43 @@
+#include <iostream>
+#include <string>
+#include <format>
+using namespace std;
+;
+ 
+bool anagram(string x, string y)
+{
+	int count = 0;
+ 
+	for (int i = 0; i < x.size(); i++)
+	{
+		for (int j = 0; j < y.size(); j++)
+		{
+			if (y[j] == x[i])
+			{
+				count++;
+				y.erase(j, 1);
+			}
+ 
+		}
+	}
+	return count == x.size() && y.empty();
+}
+int main()
+{
+	string x = "rat";
+	string y = "tar";
+ 
+	if (anagram(x, y))
+	{
+		cout << "'" << x << "'" << " and " << "'" << y << "'" << " are anagrams ";
+	}
+	else
+
+
+
+
+	{
+		cout << "'" << x << "'" << " and " << "'" << y << "'" << " are not anagrams ";
+	}
+	
+}
