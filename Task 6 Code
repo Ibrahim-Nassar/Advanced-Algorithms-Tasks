@@ -1,0 +1,106 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <climits>
+ 
+using namespace std;
+ 
+int main() {
+    string text;
+    int lineWidth;
+ 
+    // Prompt user for input text
+    cout << “Enter the text: “;
+    getline(cin, text);
+ 
+    // Prompt user for the desired line width
+    cout << “Enter the line width: “;
+    cin >> lineWidth;
+ 
+    // Split the input text into individual words
+    vector<string> words;
+    string currentWord;
+    for (char c : text) {
+        if (c == ‘ ‘) { // Check for space delimiter
+            if (!currentWord.empty()) { // If a word is accumulated
+                words.push_back(currentWord); // Add the word to the list
+                currentWord = “”; // Reset the current word buffer
+            }
+        }
+        else {
+            currentWord += c; // Append character to the current word
+        }
+    }
+    // Add the last word if any
+    if (!currentWord.empty()) {
+        words.push_back(currentWord);
+    }
+ 
+    int n = words.size();
+    if (n == 0) return 0; // Handle empty input
+ 
+    // Initialize DP tables
+    // vector1[i][j] holds the minimal unused space for words I to j
+    vector<vector<int>> vector1(n + 1, vector<int>(n + 1, INT_MAX));
+    // vector2[i][j] holds the optimal breakpoint for words I to j
+    vector<vector<int>> vector2(n + 1, vector<int>(n + 1, 0));
+ 
+    // Base case: single words
+    for (int I = 1; I <= n; i++) {
+        vector1[i][i] = lineWidth – words[I – 1].length(); // Calculate remaining space
+        if (vector1[i][i] < 0) vector1[i][i] = INT_MAX; // Invalidate if word exceeds line width
+    }
+ 
+    // Fill DP tables for all possible word groupings
+    for (int len = 2; len <= n; len++) { // Group lengths from 2 to n
+        for (int I = 1; I <= n – len + 1; i++) { // Start index of the group
+            int j = I + len – 1; // End index of the group
+            int currentLineLength = 0;
+ 
+            // Calculate total length of words from I to j including spaces
+            for (int k = I; k <= j; k++) {
+                currentLineLength += words[k – 1].length();
+                if (k > i) currentLineLength++; // Add space between words
+            }
+ 
+            if (currentLineLength <= lineWidth) {
+                // If the group fits in one line, update vector1 and set breakpoint to j
+                vector1[i][j] = lineWidth – currentLineLength;
+                vector2[i][j] = j;
+            }
+            else {
+                // If the group doesn’t fit, find the optimal split point
+                for (int k = I; k < j; k++) {
+                    // Check if both partitions are valid
+                    if (vector1[i][k] != INT_MAX && vector1[k + 1][j] != INT_MAX) {
+                        // Calculate combined cost
+                        int combinedCost = vector1[i][k] + vector1[k + 1][j];
+                        // Update if a lower cost is found
+                        if (combinedCost < vector1[i][j]) {
+                            vector1[i][j] = combinedCost;
+                            vector2[i][j] = k; // Set breakpoint
+                        }
+                    }
+                }
+            }
+        }
+    }
+ 
+    // Reconstruct and print the formatted lines using vector2
+    int I = 1;
+    while (I <= n) {
+        int j = (vector2[i][n] == 0) ? n : vector2[i][n]; // Determine the end of the current line
+        if (j > n) j = n; // Ensure j does not exceed the number of words
+ 
+        // Print words from I to j
+        for (int k = I; k <= j; k++) {
+            if (k – 1 < words.size()) cout << words[k – 1] << “ “; // Print word with a space
+        }
+        cout << endl; // Move to the next line
+ 
+        I = j + 1; // Update the starting index for the next line
+    }
+ 
+    return 0;
+}
