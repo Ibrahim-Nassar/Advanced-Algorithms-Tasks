@@ -1,0 +1,142 @@
+#include <iostream>
+#include <queue>
+#include <vector>
+#include <utility>
+#include <algorithm>
+ 
+using namespace std;
+ 
+const int ROWS = 15;
+const int COLS = 15;
+ 
+// Maze representation:
+// 0 represents an obstacle (not passable)
+// 1 represents an open cell (passable)
+int maze[ROWS][COLS] = {
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0},
+    {0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0},
+    {0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0},
+    {0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0},
+    {0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0},
+    {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0},
+    {0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0},
+    {0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0},
+    {0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0},
+    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+};
+ 
+// Define the start and end coordinates in the maze
+// Each pair is (row, column)
+const pair<int, int> START = { 13, 0 };
+const pair<int, int> END = { 1, 14 };
+ 
+// Performs Breadth-First Search to find the shortest path in the maze
+vector<pair<int, int>> bfs(int maze[][COLS], int rows, int cols, pair<int, int> start, pair<int, int> end) {
+    vector<pair<int, int>> path;
+ 
+    // Queue for BFS: holds cells to explore
+    queue<pair<int, int>> q;
+    q.push(start);
+ 
+    // Visited array to keep track of which cells have been explored
+    bool visited[ROWS][COLS] = { false };
+    visited[start.first][start.second] = true;
+ 
+    // Parent matrix to reconstruct the path after reaching the end:
+    // parent_matrix[r][c] stores the predecessor of cell (r,c) on the path
+    pair<int, int> parent_matrix[ROWS][COLS];
+    for (int i = 0; i < ROWS; ++i) {
+        for (int j = 0; j < COLS; ++j) {
+            parent_matrix[i][j] = { -1, -1 };
+        }
+    }
+ 
+    // Counters for analysis
+    int nodes_explored = 0;
+    int max_frontier_size = 0;
+ 
+    // BFS loop: continues until all reachable cells have been visited or we find the end
+    while (!q.empty()) {
+        // Track the largest queue size during the search (maximum frontier size)
+        if ((int)q.size() > max_frontier_size) {
+            max_frontier_size = (int)q.size();
+        }
+ 
+        // Get the current cell from the queue
+        pair<int, int> current = q.front();
+        q.pop();
+        nodes_explored++;
+ 
+        // If we've reached the end cell, reconstruct and return the path
+        if (current == end) {
+            pair<int, int> step = end;
+            while (!(step == start)) {
+                path.push_back(step);
+                step = parent_matrix[step.first][step.second];
+ 
+                // If at any point we find no valid parent, return an empty path
+                if (step.first == -1 && step.second == -1) {
+                    return vector<pair<int, int>>();
+                }
+            }
+ 
+            // Include the start cell and reverse the path so it goes from start to end
+            path.push_back(start);
+            reverse(path.begin(), path.end());
+ 
+            // Print search information
+            cout << "Path found!\n";
+            cout << "Path Length: " << path.size() << " steps\n";
+            cout << "Nodes Explored: " << nodes_explored << "\n";
+            cout << "Maximum Frontier Size: " << max_frontier_size << "\n\n";
+            return path;
+        }
+ 
+        // Directions for up, right, down, left movement
+        vector<pair<int, int>> directions = {
+            {0, 1}, {1, 0}, {0, -1}, {-1, 0}
+        };
+ 
+        // Explore all valid neighbors
+        for (auto& dir : directions) {
+            int new_row = current.first + dir.first;
+            int new_col = current.second + dir.second;
+ 
+            // Check bounds and if the cell is passable (not a 0) and not visited
+            if (new_row >= 0 && new_row < rows && new_col >= 0 && new_col < cols) {
+                if (maze[new_row][new_col] != 0 && !visited[new_row][new_col]) {
+                    q.push({ new_row, new_col });
+                    visited[new_row][new_col] = true;
+ 
+                    // Store the current cell as the parent of the newly discovered cell
+                    parent_matrix[new_row][new_col] = current;
+                }
+            }
+        }
+    }
+ 
+    // If we've exhausted all reachable cells and haven't found the end, no path exists
+    cout << "No path found from Start to End using BFS.\n";
+    return path;
+}
+ 
+int main() {
+    // Perform BFS search and retrieve the path
+    vector<pair<int, int>> path = bfs(maze, ROWS, COLS, START, END);
+ 
+    // If a path exists, print it out
+    if (!path.empty()) {
+        cout << "Path from Start to End:\n";
+        for (auto& pos : path) {
+            cout << "(" << pos.first << ", " << pos.second << ") ";
+        }
+        cout << "\n";
+    }
+ 
+    return 0;
+}
