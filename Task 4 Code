@@ -1,0 +1,192 @@
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <vector>
+#include <thread>
+#include <chrono>
+#include <cmath>
+#include <string>
+#include <tuple>
+ 
+// Rod indices: 0 = A, 1 = B, 2 = C
+std::vector<int> rods[3];
+std::vector<std::tuple<int, int, int>> performedMoves;
+// We'll store moves as (diskNumber, fromRod, toRod).
+ 
+int diskCount = 3; // Default: 3 disks, can be changed
+char rodName[3] = { 'A', 'B', 'C' };
+ 
+// The restrictedHanoi function adapted to store moves in a vector rather than just printing them:
+int restrictedHanoi(int n, int source, int target, int auxiliary, std::vector<std::tuple<int, int, int>>& moves) {
+    if (n == 1) {
+        // Move disk 1 from source to auxiliary
+        moves.push_back({ 1, source, auxiliary });
+        // Move disk 1 from auxiliary to target
+        moves.push_back({ 1, auxiliary, target });
+        return 2;
+    }
+    int total = 0;
+    // Move n-1 from source to target (using auxiliary)
+    total += restrictedHanoi(n - 1, source, target, auxiliary, moves);
+    // Move disk n from source to auxiliary
+    moves.push_back({ n, source, auxiliary });
+    total += 1;
+    // Move n-1 from target to source (using auxiliary)
+    total += restrictedHanoi(n - 1, target, source, auxiliary, moves);
+    // Move disk n from auxiliary to target
+    moves.push_back({ n, auxiliary, target });
+    total += 1;
+    // Move n-1 from source to target (using auxiliary)
+    total += restrictedHanoi(n - 1, source, target, auxiliary, moves);
+    return total;
+}
+ 
+int main() {
+    std::cout << "Enter the number of disks: ";
+    std::cin >> diskCount;
+ 
+    // Initialize rods: all disks on rod A (0), largest at bottom
+    for (int i = diskCount; i >= 1; i--) {
+        rods[0].push_back(i);
+    }
+ 
+    int source = 0; // A
+    int target = 2; // C
+    int auxiliary = 1; // B
+ 
+    // Compute moves using the provided logic
+    std::vector<std::tuple<int, int, int>> moveList;
+    std::cout << "\nSequence of moves:\n";
+    int totalMoves = restrictedHanoi(diskCount, source, target, auxiliary, moveList);
+    long long expectedMoves = (long long)std::pow(3, diskCount) - 1;
+ 
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Restricted Tower of Hanoi");
+    window.setFramerateLimit(60);
+ 
+    float baseY = 500.f;
+    float rodX[3] = { 200.f, 400.f, 600.f };
+    float rodWidth = 10.f;
+    float rodHeight = 200.f;
+ 
+    sf::RectangleShape rodsShapes[3];
+    for (int i = 0; i < 3; i++) {
+        rodsShapes[i].setSize({ rodWidth, rodHeight });
+        rodsShapes[i].setFillColor(sf::Color::Black);
+        rodsShapes[i].setOrigin(rodWidth / 2.f, 0.f);
+        rodsShapes[i].setPosition(rodX[i], baseY - rodHeight);
+    }
+ 
+    // Use an absolute path to the font file. Make sure this path is correct and the file exists there.
+    std::string fontPath = "C:/Users/Ibrahim/source/repos/Ibrahim Nassar Task 4/x64/Debug/Roboto-Regular.ttf";
+ 
+    sf::Font font;
+    if (!font.loadFromFile(fontPath)) {
+        std::cerr << "Failed to load font from: " << fontPath << "\n";
+        return 1;
+    }
+ 
+    sf::Text moveCounterText;
+    moveCounterText.setFont(font);
+    moveCounterText.setCharacterSize(24);
+    moveCounterText.setFillColor(sf::Color::Black);
+    moveCounterText.setPosition(10.f, 10.f);
+    moveCounterText.setString("Moves: 0");
+ 
+    sf::Text rodLabels[3];
+    for (int i = 0; i < 3; i++) {
+        rodLabels[i].setFont(font);
+        rodLabels[i].setCharacterSize(24);
+        rodLabels[i].setFillColor(sf::Color::Black);
+        rodLabels[i].setString(std::string(1, rodName[i]));
+        rodLabels[i].setOrigin(rodLabels[i].getLocalBounds().width / 2, 0);
+        rodLabels[i].setPosition(rodX[i], baseY + 10.f);
+    }
+ 
+    auto updateMoveCounter = [&](int moves) {
+        moveCounterText.setString("Moves: " + std::to_string(moves));
+        };
+ 
+    auto drawDisks = [&](sf::RenderWindow& window) {
+        float diskHeight = 20.f;
+        for (int r = 0; r < 3; r++) {
+            float currentY = baseY;
+            for (int disk : rods[r]) {
+                int diskNum = disk;
+                float diskWidth = 150.f - (diskCount - diskNum) * 20.f;
+                sf::RectangleShape diskShape({ diskWidth, diskHeight });
+                diskShape.setFillColor(sf::Color(100 + diskNum * 20, 50, 150 - diskNum * 20));
+                diskShape.setOrigin(diskWidth / 2.f, diskHeight);
+                diskShape.setPosition(rodX[r], currentY);
+                currentY -= diskHeight;
+                window.draw(diskShape);
+            }
+        }
+        };
+ 
+    size_t moveIndex = 0;
+    bool done = false;
+    int executedMoves = 0;
+ 
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+ 
+        window.clear(sf::Color::White);
+ 
+        for (int i = 0; i < 3; i++)
+            window.draw(rodsShapes[i]);
+        for (int i = 0; i < 3; i++)
+            window.draw(rodLabels[i]);
+ 
+        drawDisks(window);
+        window.draw(moveCounterText);
+ 
+        window.display();
+ 
+        // Animate moves
+        if (!done && moveIndex < moveList.size()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+ 
+            int d, f, t;
+            std::tie(d, f, t) = moveList[moveIndex];
+ 
+            // Perform the move
+            int disk = rods[f].back();
+            rods[f].pop_back();
+            rods[t].push_back(disk);
+ 
+            performedMoves.push_back({ d, f, t });
+ 
+            moveIndex++;
+            executedMoves++;
+            updateMoveCounter(executedMoves);
+ 
+            if (moveIndex == moveList.size()) {
+                done = true;
+            }
+        }
+ 
+        if (done && moveIndex == moveList.size()) {
+            std::cout << "\nAll moves performed:\n";
+            for (auto& m : performedMoves) {
+                int d, f, t;
+                std::tie(d, f, t) = m;
+                std::cout << "Move disk " << d << " from " << rodName[f] << " to " << rodName[t] << std::endl;
+            }
+            std::cout << "\nTotal number of moves: " << executedMoves << std::endl;
+            std::cout << "Expected number of moves (3^n - 1): " << expectedMoves << std::endl;
+            if ((long long)executedMoves == expectedMoves) {
+                std::cout << "Verification Passed: The number of moves matches 3^n - 1." << std::endl;
+            }
+            else {
+                std::cout << "Verification Failed: The number of moves does not match 3^n - 1." << std::endl;
+            }
+            done = false;
+            // After printing, the window remains open until closed by user.
+        }
+    }
+ 
+    return 0;
+}
