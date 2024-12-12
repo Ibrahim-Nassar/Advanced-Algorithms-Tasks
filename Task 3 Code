@@ -1,0 +1,156 @@
+#include <iostream>
+#include <iomanip>
+#include <chrono>
+using namespace std;
+ 
+// Counts comparisons in bubble sort
+int bubble_sort_count(int arr[], int n) {
+    int comparisons = 0;
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - 1 - i; j++) {
+            comparisons++;
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+    return comparisons;
+}
+ 
+// Counts comparisons in selection sort
+int selection_sort_count(int arr[], int n) {
+    int comparisons = 0;
+    for (int i = 0; i < n - 1; i++) {
+        int minIndex = i;
+        for (int j = i + 1; j < n; j++) {
+            comparisons++;
+            if (arr[j] < arr[minIndex]) {
+                minIndex = j;
+            }
+        }
+        swap(arr[i], arr[minIndex]);
+    }
+    return comparisons;
+}
+ 
+// Counts comparisons in insertion sort
+int insertion_sort_count(int arr[], int n) {
+    int comparisons = 0;
+    for (int i = 1; i < n; i++) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0) {
+            comparisons++;
+            if (arr[j] > key) {
+                arr[j + 1] = arr[j];
+                j--;
+            }
+            else {
+                break;
+            }
+        }
+        arr[j + 1] = key;
+    }
+    return comparisons;
+}
+ 
+// Ensures min-heap property and counts comparisons
+void minHeapify(int arr[], int n, int i, int& comparisons) {
+    int smallest = i;
+    int left = 2 * i + 1;
+    int right = 2 * i + 2;
+ 
+    if (left < n) {
+        comparisons++;
+        if (arr[left] < arr[smallest]) {
+            smallest = left;
+        }
+    }
+    if (right < n) {
+        comparisons++;
+        if (arr[right] < arr[smallest]) {
+            smallest = right;
+        }
+    }
+    if (smallest != i) {
+        swap(arr[i], arr[smallest]);
+        minHeapify(arr, n, smallest, comparisons);
+    }
+}
+ 
+// Counts comparisons in heap sort
+int heap_sort_count(int arr[], int n) {
+    int comparisons = 0;
+ 
+    // Build the min-heap
+    for (int i = n / 2 - 1; i >= 0; i--) {
+        minHeapify(arr, n, i, comparisons);
+    }
+ 
+    // Extract elements from the heap
+    for (int i = n - 1; i >= 0; i--) {
+        swap(arr[0], arr[i]);
+        minHeapify(arr, i, 0, comparisons);
+    }
+ 
+    return comparisons;
+}
+ 
+// Tests and displays comparisons for each sorting algorithm
+void test_comparisons() {
+    int randomArrays[30][30] = { /* Randomly initialized arrays */ };
+    int sortedArrays[30][30];
+    int inverseSortedArrays[30][30];
+ 
+    // Initialize sorted and inverse sorted arrays
+  for (int i = 0; i < 30; i++) {
+        for (int j = 0; j <= i; j++) {
+            sortedArrays[i][j] = j + 1;
+            inverseSortedArrays[i][j] = i - j + 1;
+        }
+    }
+    string arrayTypes[] = { "Random", "Sorted", "Inverse Sorted" };
+    int(*arrays[3])[30][30] = { &randomArrays, &sortedArrays, &inverseSortedArrays };
+ 
+    for (string algo : { "Bubble Sort", "Selection Sort", "Insertion Sort", "Heap Sort" }) {
+        cout << "Algorithm: " << algo << "\n";
+        cout << left << setw(5) << "n" << setw(15) << "ArrayType" << setw(15)
+            << "Comparisons" << setw(15) << "Time(microseconds)" << "\n";
+        cout << "-------------------------------------------------------------\n";
+ 	for (int n = 1; n <= 30; n++) {
+            for (int at = 0; at < 3; at++) {
+                int arr[30];
+                for (int k = 0; k < n; k++) {
+                    arr[k] = (*arrays[at])[n - 1][k];
+                }
+                int arrCopy[30];
+                copy(begin(arr), end(arr), begin(arrCopy));
+ 	        int comparisons = 0;
+                auto start = chrono::high_resolution_clock::now();
+ 
+                if (algo == "Bubble Sort")
+                    comparisons = bubble_sort_count(arrCopy, n);
+                else if (algo == "Selection Sort")
+                    comparisons = selection_sort_count(arrCopy, n);
+                else if (algo == "Insertion Sort")
+                    comparisons = insertion_sort_count(arrCopy, n);
+                else if (algo == "Heap Sort")
+                    comparisons = heap_sort_count(arrCopy, n);
+ 
+                auto end = chrono::high_resolution_clock::now();
+                chrono::duration<double, micro> elapsed = end - start;
+ 
+                cout << left << setw(5) << n
+                    << setw(15) << arrayTypes[at]
+                    << setw(15) << comparisons
+                    << setw(15) << elapsed.count() << "\n";
+            }
+        }
+        cout << "\n";
+    }
+}
+ 
+int main() {
+    test_comparisons();
+    return 0;
+}
